@@ -9,9 +9,9 @@ namespace StudentDataAccessLayer
     {
         private static readonly string _connectionString = DataAccesLayerSettings.GetConnectionString();
 
-        private static StudentDTO MapToDTO(SqlDataReader reader)
+        private static StudentResponseDTO MapToResponseDTO(SqlDataReader reader)
         {
-            return new StudentDTO(
+            return new StudentResponseDTO(
                 reader.GetInt32(reader.GetOrdinal("Id")),
                 reader.GetString(reader.GetOrdinal("Name")),
                 reader.GetInt32(reader.GetOrdinal("Age")),
@@ -19,9 +19,9 @@ namespace StudentDataAccessLayer
             );
         }
 
-        public static List<StudentDTO> GetAllStudents()
+        public static List<StudentResponseDTO> GetAllStudents()
         {
-            var students = new List<StudentDTO>();
+            var students = new List<StudentResponseDTO>();
 
             try
             {
@@ -35,7 +35,7 @@ namespace StudentDataAccessLayer
                     {
                         while (reader.Read())
                         {
-                            students.Add(MapToDTO(reader));
+                            students.Add(MapToResponseDTO(reader));
                         }
                     }
                 }
@@ -48,9 +48,9 @@ namespace StudentDataAccessLayer
             return students;
         }
 
-        public static List<StudentDTO> GetPassedStudents()
+        public static List<StudentResponseDTO> GetPassedStudents()
         {
-            var students = new List<StudentDTO>();
+            var students = new List<StudentResponseDTO>();
 
             try
             {
@@ -64,7 +64,7 @@ namespace StudentDataAccessLayer
                     {
                         while (reader.Read())
                         {
-                            students.Add(MapToDTO(reader));
+                            students.Add(MapToResponseDTO(reader));
                         }
                     }
                 }
@@ -101,7 +101,7 @@ namespace StudentDataAccessLayer
             }
         }
 
-        public static StudentDTO? GetStudentById(int studentId)
+        public static StudentResponseDTO? GetStudentById(int studentId)
         {
             if (studentId < 1)
                 throw new ArgumentException("Student ID must be greater than zero.", nameof(studentId));
@@ -118,7 +118,7 @@ namespace StudentDataAccessLayer
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         if (reader.Read())
-                            return MapToDTO(reader);
+                            return MapToResponseDTO(reader);
 
                         return null;
                     }
@@ -130,7 +130,7 @@ namespace StudentDataAccessLayer
             }
         }
 
-        public static int AddStudent(StudentDTO student)
+        public static int AddStudent(StudentResponseDTO student)
         {
             if (student == null)
                 throw new ArgumentNullException(nameof(student));
@@ -176,7 +176,7 @@ namespace StudentDataAccessLayer
             }
         }
 
-        public static bool UpdateStudent(StudentDTO student)
+        public static bool UpdateStudent(StudentResponseDTO student)
         {
             if (student == null)
                 throw new ArgumentNullException(nameof(student));
