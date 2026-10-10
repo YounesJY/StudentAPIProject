@@ -1,0 +1,12 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.vsidx
+
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# Misc
+*.log
