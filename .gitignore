@@ -5,6 +5,7 @@
 *.vsidx
 *.userosscache
 *.sln.docstates
+*.csproj.user
 
 # Build output
 [Bb]in/
@@ -12,3 +13,6 @@
 
 # Misc
 *.log
+
+# Local secrets
+appsettings.Development.json
