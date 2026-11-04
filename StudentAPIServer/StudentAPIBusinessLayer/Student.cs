@@ -1,4 +1,4 @@
-﻿using Contracts;
+﻿using Contracts.DTOs;
 using StudentDataAccessLayer;
 
 
@@ -12,10 +12,12 @@ namespace StudentAPIBusinessLayer
         public string Name { get; set; }
         public int Age { get; set; }
         public int Grade { get; set; }
+        public string? Email { get; set; }
+        public string? Role { get; set; }
         public enMode Mode { get; private set; }
         public StudentResponseDTO ToDTO()
         {
-            return new StudentResponseDTO(ID, Name, Age, Grade);
+            return new StudentResponseDTO(ID, Name, Age, Grade, Email, Role);
         }
 
 
@@ -25,6 +27,8 @@ namespace StudentAPIBusinessLayer
             Name = dto.Name;
             Age = dto.Age;
             Grade = dto.Grade;
+            Email = dto.Email;
+            Role = dto.Role;
 
             Mode = mode;
         }
@@ -34,6 +38,8 @@ namespace StudentAPIBusinessLayer
             Name = dto.Name;
             Age = dto.Age;
             Grade = dto.Grade;
+            Email = null;   
+            Role = "Student"; 
 
             Mode = enMode.AddNew;
         }

@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using Microsoft.Data.SqlClient;
-using Contracts;
+using Contracts.DTOs;
 
 namespace StudentDataAccessLayer
 {
@@ -13,7 +13,9 @@ namespace StudentDataAccessLayer
                 reader.GetInt32(reader.GetOrdinal("Id")),
                 reader.GetString(reader.GetOrdinal("Name")),
                 reader.GetInt32(reader.GetOrdinal("Age")),
-                reader.GetInt32(reader.GetOrdinal("Grade"))
+                reader.GetInt32(reader.GetOrdinal("Grade")),
+                !reader.IsDBNull(reader.GetOrdinal("Email")) ? reader.GetString(reader.GetOrdinal("Email")) : null,
+                !reader.IsDBNull(reader.GetOrdinal("Role")) ? reader.GetString(reader.GetOrdinal("Role")) : null
             );
         }
 
@@ -43,7 +45,6 @@ namespace StudentDataAccessLayer
 
             return students;
         }
-
         public static List<StudentResponseDTO> GetPassedStudents()
         {
             var students = new List<StudentResponseDTO>();
@@ -69,7 +70,6 @@ namespace StudentDataAccessLayer
 
             return students;
         }
-
         public static double GetAverageGrade()
         {
             try
@@ -92,7 +92,6 @@ namespace StudentDataAccessLayer
                 throw new Exception("An error occurred while calculating the average grade.", ex);
             }
         }
-
         public static StudentResponseDTO? GetStudentById(int studentId)
         {
             try
@@ -115,7 +114,6 @@ namespace StudentDataAccessLayer
                 throw new Exception($"An error occurred while retrieving student with ID {studentId}.", ex);
             }
         }
-
         public static int AddStudent(StudentResponseDTO student)
         {
             try
@@ -147,7 +145,6 @@ namespace StudentDataAccessLayer
                 throw new Exception("An error occurred while adding the student to the database.", ex);
             }
         }
-
         public static bool UpdateStudent(StudentResponseDTO student)
         {
             try
@@ -177,7 +174,6 @@ namespace StudentDataAccessLayer
                 throw new Exception($"An error occurred while updating student with ID {student.Id}.", ex);
             }
         }
-
         public static bool DeleteStudent(int studentId)
         {
             try
