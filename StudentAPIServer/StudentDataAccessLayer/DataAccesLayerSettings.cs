@@ -1,7 +1,21 @@
 ﻿namespace StudentDataAccessLayer
 {
-    internal static class DataAccesLayerSettings
+    public static class DataAccesLayerSettings
     {
-        public static string GetConnectionString() => "Server=localhost;Database=StudentsDB;User Id=sa;Password=JY0912;Encrypt=False;TrustServerCertificate=True;Connection Timeout=30;";
+        private static string? _connectionString;
+
+        public static void SetConnectionString(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public static string GetConnectionString()
+        {
+            if (string.IsNullOrWhiteSpace(_connectionString))
+                throw new InvalidOperationException(
+                    "Connection string has not been set. Call SetConnectionString at startup.");
+
+            return _connectionString;
+        }
     }
 }

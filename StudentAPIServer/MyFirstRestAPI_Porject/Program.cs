@@ -1,7 +1,12 @@
+using StudentDataAccessLayer;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+DataAccesLayerSettings.SetConnectionString(
+    builder.Configuration.GetConnectionString("Default")
+        ?? throw new InvalidOperationException("ConnectionStrings:Default is missing."));
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
