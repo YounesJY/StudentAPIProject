@@ -2,7 +2,6 @@
 using StudentDataAccessLayer;
 
 
-
 namespace StudentAPIBusinessLayer
 {
     public class Student
@@ -61,39 +60,87 @@ namespace StudentAPIBusinessLayer
         {
             return StudentData.GetAverageGrade();
         }
-        public static bool Delete(int id)
+        public static DeleteResult Delete(int id)
         {
-            return StudentData.DeleteStudent(id);
-        }
+            if (id < 1)
+                return DeleteResult.NotFound($"Student with ID {id} not found.");
 
-        public bool Save()
-        {
-            switch (Mode)
+            try
             {
-                case enMode.AddNew:
-                    if (AddNewStudent())
-                    {
-                        Mode = enMode.Update;
-                        return true;
-                    }
-                    return false;
-
-                case enMode.Update:
-                    return UpdateStudent();
-
-                default:
-                    return false;
+                return StudentData.DeleteStudent(id)
+                    ? DeleteResult.Success()
+                    : DeleteResult.NotFound($"Student with ID {id} not found.");
+            }
+            catch (Exception ex)
+            {
+                return DeleteResult.DatabaseError(ex.Message);
             }
         }
 
-        private bool AddNewStudent()
+        private bool IsValid(out string? error)
+        {
+            if (string.IsNullOrWhiteSpace(Name))
+            {
+                error = "Name cannot be empty.";
+                return false;
+            }
+
+            if (Name.Length > 100)
+            {
+                error = "Name cannot exceed 100 characters.";
+                return false;
+            }
+
+            if (Age < 0 || Age > 150)
+            {
+                error = "Age must be between 0 and 150.";
+                return false;
+            }
+
+            if (Grade < 0 || Grade > 100)
+            {
+                error = "Grade must be between 0 and 100.";
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+        private SaveResult InsertNewStudent()
         {
             ID = StudentData.AddStudent(ToDTO());
-            return ID != -1;
+
+            if (ID == -1)
+                return SaveResult.DatabaseError("Failed to insert the student.");
+
+            Mode = enMode.Update;
+            return SaveResult.Success();
         }
-        private bool UpdateStudent()
+        private SaveResult UpdateExistingStudent()
         {
-            return StudentData.UpdateStudent(ToDTO());
+            return StudentData.UpdateStudent(ToDTO())
+                ? SaveResult.Success()
+                : SaveResult.NotFound($"Student with ID {ID} not found.");
+        }
+
+        public SaveResult Save()
+        {
+            if (!IsValid(out string? error))
+                return SaveResult.ValidationFailed(error!);
+
+            try
+            {
+                return Mode switch
+                {
+                    enMode.AddNew => InsertNewStudent(),
+                    enMode.Update => UpdateExistingStudent(),
+                    _ => SaveResult.DatabaseError("Invalid entity mode.")
+                };
+            }
+            catch (Exception ex)
+            {
+                return SaveResult.DatabaseError(ex.Message);
+            }
         }
     }
 }
