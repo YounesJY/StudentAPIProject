@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace Contracts
+namespace Contracts.DTOs
 {
     public class CreateStudentRequestDTO
     {
