@@ -54,7 +54,6 @@ namespace StudentApi.Controllers
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<StudentResponseDTO> GetStudentById(int id)
         {
             if (id < 1)
@@ -65,7 +64,6 @@ namespace StudentApi.Controllers
             if (student == null)
                 return NotFound($"Student with ID {id} not found.");
 
-            // Return the DTO, not the domain object.
             return Ok(student.ToDTO());
         }
 
@@ -124,10 +122,10 @@ namespace StudentApi.Controllers
             if (id < 1)
                 return BadRequest($"Not accepted ID {id}");
 
-            if (Student.DeleteStudent(id))
-                return NoContent();
+            if (!Student.Delete(id))
+                return NotFound($"Student with ID {id} not found.");
 
-            return NotFound($"Student with ID {id} not found.");
+            return NoContent();
         }
     }
 }

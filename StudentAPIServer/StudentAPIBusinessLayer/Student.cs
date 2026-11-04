@@ -61,7 +61,7 @@ namespace StudentAPIBusinessLayer
         {
             return StudentData.GetAverageGrade();
         }
-        public static bool DeleteStudent(int id)
+        public static bool Delete(int id)
         {
             return StudentData.DeleteStudent(id);
         }

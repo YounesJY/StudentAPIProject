@@ -2,13 +2,11 @@
 using Microsoft.Data.SqlClient;
 using Contracts;
 
-
 namespace StudentDataAccessLayer
 {
     public class StudentData
     {
         private static readonly string _connectionString = DataAccesLayerSettings.GetConnectionString();
-
         private static StudentResponseDTO MapToResponseDTO(SqlDataReader reader)
         {
             return new StudentResponseDTO(
@@ -19,25 +17,23 @@ namespace StudentDataAccessLayer
             );
         }
 
+
         public static List<StudentResponseDTO> GetAllStudents()
         {
             var students = new List<StudentResponseDTO>();
 
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_GetAllStudents", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    connection.Open();
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_GetAllStudents", connection);
+                command.CommandType = CommandType.StoredProcedure;
 
-                    using (SqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            students.Add(MapToResponseDTO(reader));
-                        }
-                    }
+                connection.Open();
+
+                using SqlDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    students.Add(MapToResponseDTO(reader));
                 }
             }
             catch (SqlException ex)
@@ -54,19 +50,16 @@ namespace StudentDataAccessLayer
 
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_GetPassedStudents", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    connection.Open();
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_GetPassedStudents", connection);
+                command.CommandType = CommandType.StoredProcedure;
 
-                    using (SqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            students.Add(MapToResponseDTO(reader));
-                        }
-                    }
+                connection.Open();
+
+                using SqlDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    students.Add(MapToResponseDTO(reader));
                 }
             }
             catch (SqlException ex)
@@ -81,19 +74,18 @@ namespace StudentDataAccessLayer
         {
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_GetAverageGrade", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    connection.Open();
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_GetAverageGrade", connection);
+                command.CommandType = CommandType.StoredProcedure;
 
-                    object result = command.ExecuteScalar();
+                connection.Open();
 
-                    if (result == null || result == DBNull.Value)
-                        return 0;
+                object? result = command.ExecuteScalar();
 
-                    return Convert.ToDouble(result);
-                }
+                if (result is null or DBNull)
+                    return 0;
+
+                return Convert.ToDouble(result);
             }
             catch (SqlException ex)
             {
@@ -103,26 +95,20 @@ namespace StudentDataAccessLayer
 
         public static StudentResponseDTO? GetStudentById(int studentId)
         {
-            if (studentId < 1)
-                throw new ArgumentException("Student ID must be greater than zero.", nameof(studentId));
-
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_GetStudentById", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@StudentId", studentId);
-                    connection.Open();
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_GetStudentById", connection);
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add("@StudentId", SqlDbType.Int).Value = studentId;
 
-                    using (SqlDataReader reader = command.ExecuteReader())
-                    {
-                        if (reader.Read())
-                            return MapToResponseDTO(reader);
+                connection.Open();
 
-                        return null;
-                    }
-                }
+                using SqlDataReader reader = command.ExecuteReader();
+                if (reader.Read())
+                    return MapToResponseDTO(reader);
+
+                return null;
             }
             catch (SqlException ex)
             {
@@ -132,43 +118,29 @@ namespace StudentDataAccessLayer
 
         public static int AddStudent(StudentResponseDTO student)
         {
-            if (student == null)
-                throw new ArgumentNullException(nameof(student));
-
-            if (string.IsNullOrWhiteSpace(student.Name))
-                throw new ArgumentException("Student name cannot be empty.", nameof(student));
-
-            if (student.Age < 0)
-                throw new ArgumentException("Student age cannot be negative.", nameof(student));
-
-            if (student.Grade < 0)
-                throw new ArgumentException("Student grade cannot be negative.", nameof(student));
-
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_AddStudent", connection))
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_AddStudent", connection);
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = student.Name;
+                command.Parameters.Add("@Age", SqlDbType.Int).Value = student.Age;
+                command.Parameters.Add("@Grade", SqlDbType.Int).Value = student.Grade;
+
+                var newIdParam = new SqlParameter("@NewStudentId", SqlDbType.Int)
                 {
-                    command.CommandType = CommandType.StoredProcedure;
+                    Direction = ParameterDirection.Output
+                };
+                command.Parameters.Add(newIdParam);
 
-                    command.Parameters.AddWithValue("@Name", student.Name);
-                    command.Parameters.AddWithValue("@Age", student.Age);
-                    command.Parameters.AddWithValue("@Grade", student.Grade);
+                connection.Open();
+                command.ExecuteNonQuery();
 
-                    var outputIdParam = new SqlParameter("@NewStudentId", SqlDbType.Int)
-                    {
-                        Direction = ParameterDirection.Output
-                    };
-                    command.Parameters.Add(outputIdParam);
+                if (newIdParam.Value is null or DBNull)
+                    throw new Exception("Failed to retrieve the new student ID from the database.");
 
-                    connection.Open();
-                    command.ExecuteNonQuery();
-
-                    if (outputIdParam.Value == null || outputIdParam.Value == DBNull.Value)
-                        throw new Exception("Failed to retrieve the new student ID from the database.");
-
-                    return (int)outputIdParam.Value;
-                }
+                return (int)newIdParam.Value;
             }
             catch (SqlException ex)
             {
@@ -178,38 +150,27 @@ namespace StudentDataAccessLayer
 
         public static bool UpdateStudent(StudentResponseDTO student)
         {
-            if (student == null)
-                throw new ArgumentNullException(nameof(student));
-
-            if (student.Id < 1)
-                throw new ArgumentException("Student ID must be greater than zero.", nameof(student));
-
-            if (string.IsNullOrWhiteSpace(student.Name))
-                throw new ArgumentException("Student name cannot be empty.", nameof(student));
-
-            if (student.Age < 0)
-                throw new ArgumentException("Student age cannot be negative.", nameof(student));
-
-            if (student.Grade < 0)
-                throw new ArgumentException("Student grade cannot be negative.", nameof(student));
-
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_UpdateStudent", connection))
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_UpdateStudent", connection);
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add("@StudentId", SqlDbType.Int).Value = student.Id;
+                command.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = student.Name;
+                command.Parameters.Add("@Age", SqlDbType.Int).Value = student.Age;
+                command.Parameters.Add("@Grade", SqlDbType.Int).Value = student.Grade;
+
+                var returnParam = new SqlParameter("@ReturnValue", SqlDbType.Int)
                 {
-                    command.CommandType = CommandType.StoredProcedure;
+                    Direction = ParameterDirection.ReturnValue
+                };
+                command.Parameters.Add(returnParam);
 
-                    command.Parameters.AddWithValue("@StudentId", student.Id);
-                    command.Parameters.AddWithValue("@Name", student.Name);
-                    command.Parameters.AddWithValue("@Age", student.Age);
-                    command.Parameters.AddWithValue("@Grade", student.Grade);
+                connection.Open();
+                command.ExecuteNonQuery();
 
-                    connection.Open();
-
-                    int rowsAffected = command.ExecuteNonQuery();
-                    return rowsAffected > 0;
-                }
+                return (int)returnParam.Value == 0;
             }
             catch (SqlException ex)
             {
@@ -219,21 +180,23 @@ namespace StudentDataAccessLayer
 
         public static bool DeleteStudent(int studentId)
         {
-            if (studentId < 1)
-                throw new ArgumentException("Student ID must be greater than zero.", nameof(studentId));
-
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand("SP_DeleteStudent", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@StudentId", studentId);
-                    connection.Open();
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_DeleteStudent", connection);
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add("@StudentId", SqlDbType.Int).Value = studentId;
 
-                    int rowsAffected = Convert.ToInt32(command.ExecuteScalar());
-                    return rowsAffected > 0;
-                }
+                var returnParam = new SqlParameter("@ReturnValue", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.ReturnValue
+                };
+                command.Parameters.Add(returnParam);
+
+                connection.Open();
+                command.ExecuteNonQuery();
+
+                return (int)returnParam.Value == 0;
             }
             catch (SqlException ex)
             {
