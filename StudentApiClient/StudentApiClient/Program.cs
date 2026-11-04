@@ -1,83 +1,32 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Text.Json.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using System.Net.Http.Json;
+
 
 namespace StudentApiClient
 {
+    public class Student
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+        public int Age { get; set; }
+        public int Grade { get; set; }
+    }
+
     class Program
     {
         static readonly HttpClient httpClient = new HttpClient();
-
-        static async Task Main(string[] args)
-        {
-            httpClient.BaseAddress = new Uri("http://localhost:5215/api/Students/"); // Set this to the correct URI for your API
-            
-           //this will show all students 
-           await GetAllStudents();
-
-            //this will show passed students only
-            await GetPassedStudents();
-
-            //this will show the calculated average for students grades
-            await GetAverageGrade();
-
-            //this will show the info for student 1
-            await GetStudentById(1); // Example: Get student with ID 1
-
-            //this will show the info for student 20 and show not found because 20 is not there
-            await GetStudentById(20); // Example: Get student with ID 20
-
-            //this will add new student
-            var newStudent = new Student { Name = "Mazen Abdullah", Age = 20, Grade = 85 };
-            await AddStudent(newStudent); // Example: Add a new student
-
-            //this will show all students after adding new one
-            await GetAllStudents();
-
-            //this will delete student 1
-            await DeleteStudent(1); // Example: Delete student with ID 1
-            
-            //this will show all students after deleting student 1
-            await GetAllStudents();
-
-            //this will Update student 2
-            await UpdateStudent(2, new Student { Name = "Salma", Age = 22, Grade = 90 }); // Example: Update student with ID 2
-
-            await GetAllStudents();
-            
-            //this will show all students after Updating student 2
-            await GetAllStudents();
-
-        }
 
         static async Task GetAllStudents()
         {
             try
             {
-                Console.WriteLine("\n_____________________________");
-                Console.WriteLine("\nFetching all students...\n");
-                var response = await httpClient.GetAsync("All");
+                Console.WriteLine("--------------------------");
+                Console.WriteLine("Fetching all students.....");
+                var students = await httpClient.GetFromJsonAsync<List<Student>>("api/Students/All");
 
-                if (response.IsSuccessStatusCode)
+                if (students != null)
                 {
-                    var students = await response.Content.ReadFromJsonAsync<List<Student>>();
-                    if (students != null && students.Count > 0)
-                    {
-                        foreach (var student in students)
-                        {
-                            Console.WriteLine($"ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
-                        }
-                    }
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.WriteLine("No students found.");
+                    foreach (var student in students)
+                        Console.WriteLine($"ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
                 }
             }
             catch (Exception ex)
@@ -85,31 +34,18 @@ namespace StudentApiClient
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
-
-
         static async Task GetPassedStudents()
         {
             try
             {
-                Console.WriteLine("\n_____________________________");
-                Console.WriteLine("\nFetching passed students...\n");
-                var response = await httpClient.GetAsync("Passed");
+                Console.WriteLine("-----------------------------");
+                Console.WriteLine("Fetching Passed students.....");
+                var students = await httpClient.GetFromJsonAsync<List<Student>>("api/Students/Passed");
 
-                if (response.IsSuccessStatusCode)
+                if (students != null)
                 {
-                    var passedStudents = await response.Content.ReadFromJsonAsync<List<Student>>();
-                    if (passedStudents != null && passedStudents.Count > 0)
-                    {
-                        foreach (var student in passedStudents)
-                        {
-                            Console.WriteLine($"ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
-                        }
-                    }
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.WriteLine("No passed students found.");
+                    foreach (var student in students)
+                        Console.WriteLine($"ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
                 }
             }
             catch (Exception ex)
@@ -117,57 +53,40 @@ namespace StudentApiClient
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
-
         static async Task GetAverageGrade()
         {
             try
             {
-                Console.WriteLine("\n_____________________________");
-                Console.WriteLine("\nFetching average grade...\n");
-                var response = await httpClient.GetAsync("AverageGrade");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var averageGrade = await response.Content.ReadFromJsonAsync<double>();
-                    Console.WriteLine($"Average Grade: {averageGrade}");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.WriteLine("No students found.");
-                }
+                Console.WriteLine("-----------------------------");
+                Console.WriteLine("Fetching average grade .....");
+                var averageGrade = await httpClient.GetFromJsonAsync<float>("api/Students/AverageGrade");
+                Console.WriteLine($"Average Grade: {averageGrade}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
-
         static async Task GetStudentById(int id)
         {
             try
             {
-                Console.WriteLine("\n_____________________________");
-                Console.WriteLine($"\nFetching student with ID {id}...\n");
+                Console.WriteLine("--------------------------------");
+                Console.WriteLine($"Fetching student with ID {id}..");
 
-                var response = await httpClient.GetAsync($"{id}");
-
+                var response = await httpClient.GetAsync($"api/Students/{id}");
                 if (response.IsSuccessStatusCode)
                 {
                     var student = await response.Content.ReadFromJsonAsync<Student>();
                     if (student != null)
-                    {
                         Console.WriteLine($"ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
-                    }
+                    else
+                        Console.WriteLine("Empty response body.");
                 }
-                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                else
                 {
-                    Console.WriteLine($"Bad Request: Not accepted ID {id}");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.WriteLine($"Not Found: Student with ID {id} not found.");
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error {(int)response.StatusCode}: {errorMessage}");
                 }
             }
             catch (Exception ex)
@@ -175,25 +94,31 @@ namespace StudentApiClient
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
-
         static async Task AddStudent(Student newStudent)
         {
             try
             {
-                Console.WriteLine("\n_____________________________");
-                Console.WriteLine("\nAdding a new student...\n");
+                Console.WriteLine("-----------------------");
+                Console.WriteLine("Adding a new student...");
 
-                var response = await httpClient.PostAsJsonAsync("", newStudent);
-
-                if (response.IsSuccessStatusCode)
+                var response = await httpClient.PostAsJsonAsync("api/Students", newStudent);
+                if (response.StatusCode == System.Net.HttpStatusCode.Created)
                 {
+                    var location = response.Headers.Location;
                     var addedStudent = await response.Content.ReadFromJsonAsync<Student>();
-                    Console.WriteLine($"Added Student - ID: {addedStudent.Id}, Name: {addedStudent.Name}, Age: {addedStudent.Age}, Grade: {addedStudent.Grade}");
+
+                    if (addedStudent != null)
+                    {
+                        Console.WriteLine($"Created at: {location}");
+                        Console.WriteLine($"ID: {addedStudent.Id}, Name: {addedStudent.Name}, Age: {addedStudent.Age}, Grade: {addedStudent.Grade}");
+                    }
+                    else
+                        Console.WriteLine("Created, but response body was empty.");
                 }
-                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                else
                 {
-                    Console.WriteLine("Bad Request: Invalid student data.");
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error {(int)response.StatusCode}: {error}");
                 }
             }
             catch (Exception ex)
@@ -201,26 +126,20 @@ namespace StudentApiClient
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
         static async Task DeleteStudent(int id)
         {
             try
             {
                 Console.WriteLine("\n_____________________________");
                 Console.WriteLine($"\nDeleting student with ID {id}...\n");
-                var response = await httpClient.DeleteAsync($"{id}");
 
+                var response = await httpClient.DeleteAsync($"api/Students/{id}");
                 if (response.IsSuccessStatusCode)
-                {
                     Console.WriteLine($"Student with ID {id} has been deleted.");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                else
                 {
-                    Console.WriteLine($"Bad Request: Not accepted ID {id}");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.WriteLine($"Not Found: Student with ID {id} not found.");
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error {(int)response.StatusCode}: {error}");
                 }
             }
             catch (Exception ex)
@@ -228,27 +147,26 @@ namespace StudentApiClient
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
         static async Task UpdateStudent(int id, Student updatedStudent)
         {
             try
             {
-                Console.WriteLine("\n_____________________________");
-                Console.WriteLine($"\nUpdating student with ID {id}...\n");
-                var response = await httpClient.PutAsJsonAsync($"{id}", updatedStudent);
+                Console.WriteLine("---------------------------------");
+                Console.WriteLine($"Updating student with ID {id}...");
 
+                var response = await httpClient.PutAsJsonAsync($"api/Students/{id}", updatedStudent);
                 if (response.IsSuccessStatusCode)
                 {
                     var student = await response.Content.ReadFromJsonAsync<Student>();
-                    Console.WriteLine($"Updated Student: ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
+                    if (student != null)
+                        Console.WriteLine($"Updated Student — ID: {student.Id}, Name: {student.Name}, Age: {student.Age}, Grade: {student.Grade}");
+                    else
+                        Console.WriteLine("Update succeeded, but response body was empty.");
                 }
-                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                else
                 {
-                    Console.WriteLine("Failed to update student: Invalid data.");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.WriteLine($"Student with ID {id} not found.");
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error {(int)response.StatusCode}: {error}");
                 }
             }
             catch (Exception ex)
@@ -257,15 +175,43 @@ namespace StudentApiClient
             }
         }
 
-    }
 
+        static async Task Main(string[] args)
+        {
+            // [NEVER USE],
+            // httpClient.BaseAddress = new Uri("http://localhost:5151/api/Students");
+            // the base address should be set to the API's base URL, not a specific endpoint.
+            // The correct way is to set it to "http://localhost:5151/api/" and then use relative paths for specific endpoints.
 
+            // Set this to the correct URI for your API
+            httpClient.BaseAddress = new Uri("http://localhost:5215/");
 
-    public class Student
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public int Age { get; set; }
-        public int  Grade { get; set; }
+            await GetAllStudents();
+            await GetPassedStudents();
+            await GetAverageGrade();
+            await GetStudentById(0);
+            await GetStudentById(1);
+            await GetStudentById(20);
+
+            var newStudent = new Student
+            {
+                Name = "UnisJY",
+                Age = 72,
+                Grade = 75
+            };
+            await AddStudent(newStudent);
+            await GetAllStudents();
+
+            await DeleteStudent(2);
+            await DeleteStudent(3);
+            await DeleteStudent(4);
+            await DeleteStudent(8);
+            await GetAllStudents();
+
+            await UpdateStudent(0, new Student { Id = 0, Name = "Salma", Age = 22, Grade = 90 });   // 400 — invalid ID
+            await UpdateStudent(999, new Student { Id = 999, Name = "Akram", Age = 27, Grade = 60 }); // 404 — not found
+            await UpdateStudent(1, new Student { Id = 1, Name = "Ala", Age = 42, Grade = 69 });   // 200 
+            await GetAllStudents();
+        }
     }
 }
