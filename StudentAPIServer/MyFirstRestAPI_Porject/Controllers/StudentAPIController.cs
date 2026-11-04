@@ -1,13 +1,11 @@
+using Contracts.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using StudentAPIBusinessLayer;
-using Contracts;
 
 
 namespace StudentApi.Controllers
 {
     [ApiController]
-    // [Route("[controller]")] // Dynamic route — [controller] is replaced by the class name minus "Controller".
-    // Renaming the class changes the URL and breaks external clients. Hard-coded for stability.
     [Route("api/Students")]
     public class StudentsController : ControllerBase
     {
@@ -15,38 +13,61 @@ namespace StudentApi.Controllers
         [HttpGet("All", Name = "GetAllStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentResponseDTO>> GetAllStudents()
         {
-            List<StudentResponseDTO> students = Student.GetAllStudents();
+            try
+            {
+                List<StudentResponseDTO> students = Student.GetAllStudents();
 
+                if (students.Count == 0)
+                    return NotFound("No students found.");
 
-            if (students.Count == 0)
-                return NotFound("No students found.");
-
-            return Ok(students);
+                return Ok(students);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
+            }
         }
 
         // ---------- GET /api/Students/Passed ----------
         [HttpGet("Passed", Name = "GetPassedStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentResponseDTO>> GetPassedStudents()
         {
-            List<StudentResponseDTO> passedStudents = Student.GetPassedStudents();
+            try
+            {
+                List<StudentResponseDTO> passedStudents = Student.GetPassedStudents();
 
-            if (passedStudents.Count == 0)
-                return NotFound("No students found.");
+                if (passedStudents.Count == 0)
+                    return NotFound("No students found.");
 
-            return Ok(passedStudents);
+                return Ok(passedStudents);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
+            }
         }
 
         // ---------- GET /api/Students/AverageGrade ----------
         [HttpGet("AverageGrade", Name = "GetAverageGrade")]
         [ProducesResponseType(typeof(double), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult<double> GetAverageGrade()
         {
-            double averageGrade = Student.GetAverageGrade();
-            return Ok(averageGrade);
+            try
+            {
+                double averageGrade = Student.GetAverageGrade();
+                return Ok(averageGrade);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
+            }
         }
 
         // ---------- GET /api/Students/{id} ----------
@@ -54,37 +75,54 @@ namespace StudentApi.Controllers
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult<StudentResponseDTO> GetStudentById(int id)
         {
             if (id < 1)
                 return BadRequest($"Not accepted ID {id}");
 
-            var student = Student.Find(id);
+            try
+            {
+                var student = Student.Find(id);
 
-            if (student == null)
-                return NotFound($"Student with ID {id} not found.");
+                if (student == null)
+                    return NotFound($"Student with ID {id} not found.");
 
-            return Ok(student.ToDTO());
+                return Ok(student.ToDTO());
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
+            }
         }
 
         // ---------- POST /api/Students ----------
         [HttpPost(Name = "AddStudent")]
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public ActionResult<StudentResponseDTO> AddStudent(CreateStudentRequestDTO newStudent)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public ActionResult<StudentResponseDTO> AddStudent([FromBody] CreateStudentRequestDTO newStudent)
         {
-            /*
-                Factory method (Student.CreateNew) would read clearer at the call site,
-                but the current public constructor achieves the same goal: the API can't
-                pick the mode, only the BL can. The constructor sets Mode = AddNew
-                internally. Swapping to a factory later is a two-line change.
-            */
+            if (newStudent == null)
+                return BadRequest("Request body is required.");
+
             Student student = new Student(newStudent);
+            SaveResult result = student.Save();
 
-            if (!student.Save())
-                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to create student.");
+            return result.Status switch
+            {
+                SaveResult.enSaveResult.Success =>
+                    CreatedAtRoute("GetStudentById", new { id = student.ID }, student.ToDTO()),
 
-            return CreatedAtRoute("GetStudentById", new { id = student.ID }, student.ToDTO());
+                SaveResult.enSaveResult.ValidationFailed =>
+                    BadRequest(result.ErrorMessage),
+
+                SaveResult.enSaveResult.DatabaseError =>
+                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
+
+                _ =>
+                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+            };
         }
 
         // ---------- PUT /api/Students/{id} ----------
@@ -92,24 +130,49 @@ namespace StudentApi.Controllers
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
-        public ActionResult<StudentResponseDTO> UpdateStudent(int id, UpdateStudentRequestDTO updatedStudent)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public ActionResult<StudentResponseDTO> UpdateStudent(int id, [FromBody] UpdateStudentRequestDTO updatedStudent)
         {
             if (id < 1)
                 return BadRequest($"Not accepted ID {id}");
 
-            Student? student = Student.Find(id);
-            if (student == null)
-                return NotFound($"Student with ID {id} not found.");
+            if (updatedStudent == null)
+                return BadRequest("Request body is required.");
 
-            student.Name = updatedStudent.Name;
-            student.Age = updatedStudent.Age;
-            student.Grade = updatedStudent.Grade;
+            try
+            {
+                Student? student = Student.Find(id);
+                if (student == null)
+                    return NotFound($"Student with ID {id} not found.");
 
-            if (!student.Save())
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Failed to update student with ID {id}.");
+                student.Name = updatedStudent.Name;
+                student.Age = updatedStudent.Age;
+                student.Grade = updatedStudent.Grade;
 
-            return Ok(student.ToDTO());
+                SaveResult result = student.Save();
+
+                return result.Status switch
+                {
+                    SaveResult.enSaveResult.Success =>
+                        Ok(student.ToDTO()),
+
+                    SaveResult.enSaveResult.ValidationFailed =>
+                        BadRequest(result.ErrorMessage),
+
+                    SaveResult.enSaveResult.NotFound =>
+                        NotFound(result.ErrorMessage),
+
+                    SaveResult.enSaveResult.DatabaseError =>
+                        StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
+
+                    _ =>
+                        StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+                };
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
+            }
         }
 
         // ---------- DELETE /api/Students/{id} ----------
@@ -117,15 +180,29 @@ namespace StudentApi.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult DeleteStudent(int id)
         {
             if (id < 1)
                 return BadRequest($"Not accepted ID {id}");
 
-            if (!Student.Delete(id))
-                return NotFound($"Student with ID {id} not found.");
+            DeleteResult result = Student.Delete(id);
 
-            return NoContent();
+            return result.Status switch
+            {
+                DeleteResult.enDeleteResult.Success =>
+                    NoContent(),
+
+                DeleteResult.enDeleteResult.NotFound =>
+                    NotFound(result.ErrorMessage),
+
+                DeleteResult.enDeleteResult.DatabaseError =>
+                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
+
+                _ =>
+                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+            };
         }
     }
 }
+
