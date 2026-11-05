@@ -1,6 +1,7 @@
-﻿using System.Data;
+﻿using Contracts.DTOs;
+using Contracts.DTOs.Auth;
 using Microsoft.Data.SqlClient;
-using Contracts.DTOs;
+using System.Data;
 
 namespace StudentDataAccessLayer
 {
@@ -114,6 +115,45 @@ namespace StudentDataAccessLayer
                 throw new Exception($"An error occurred while retrieving student with ID {studentId}.", ex);
             }
         }
+        public static StudentCredentialsDTO? GetStudentByEmail(string email)
+        {
+            try
+            {
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_GetStudentByEmail", connection);
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add("@Email", SqlDbType.NVarChar, 150).Value = email;
+
+                connection.Open();
+
+                using SqlDataReader reader = command.ExecuteReader();
+                if (reader.Read())
+                {
+                    return new StudentCredentialsDTO
+                    {
+                        Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                        Email = reader.GetString(reader.GetOrdinal("Email")),
+                        PasswordHash = reader.GetString(reader.GetOrdinal("PasswordHash")),
+                        Role = reader.GetString(reader.GetOrdinal("Role")),
+                        RefreshTokenHash = reader.IsDBNull(reader.GetOrdinal("RefreshTokenHash"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("RefreshTokenHash")),
+                        RefreshTokenExpiresAt = reader.IsDBNull(reader.GetOrdinal("RefreshTokenExpiresAt"))
+                            ? null
+                            : reader.GetDateTime(reader.GetOrdinal("RefreshTokenExpiresAt")),
+                        RefreshTokenRevokedAt = reader.IsDBNull(reader.GetOrdinal("RefreshTokenRevokedAt"))
+                            ? null
+                            : reader.GetDateTime(reader.GetOrdinal("RefreshTokenRevokedAt"))
+                    };
+                }
+
+                return null;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"An error occurred while retrieving student with email {email}.", ex);
+            }
+        }
         public static int AddStudent(StudentResponseDTO student)
         {
             try
@@ -197,6 +237,60 @@ namespace StudentDataAccessLayer
             catch (SqlException ex)
             {
                 throw new Exception($"An error occurred while deleting student with ID {studentId}.", ex);
+            }
+        }
+
+        public static bool UpdateRefreshToken(int studentId, string refreshTokenHash, DateTime expiresAt)
+        {
+            try
+            {
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_UpdateRefreshToken", connection);
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add("@StudentId", SqlDbType.Int).Value = studentId;
+                command.Parameters.Add("@RefreshTokenHash", SqlDbType.NVarChar, 255).Value = refreshTokenHash;
+                command.Parameters.Add("@RefreshTokenExpiresAt", SqlDbType.DateTime2).Value = expiresAt;
+
+                var returnParam = new SqlParameter("@ReturnValue", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.ReturnValue
+                };
+                command.Parameters.Add(returnParam);
+
+                connection.Open();
+                command.ExecuteNonQuery();
+
+                return (int)returnParam.Value == 0;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"An error occurred while updating refresh token for student {studentId}.", ex);
+            }
+        }
+        public static bool RevokeRefreshToken(int studentId)
+        {
+            try
+            {
+                using SqlConnection connection = new SqlConnection(_connectionString);
+                using SqlCommand command = new SqlCommand("SP_RevokeRefreshToken", connection);
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add("@StudentId", SqlDbType.Int).Value = studentId;
+
+                var returnParam = new SqlParameter("@ReturnValue", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.ReturnValue
+                };
+                command.Parameters.Add(returnParam);
+
+                connection.Open();
+                command.ExecuteNonQuery();
+
+                return (int)returnParam.Value == 0;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"An error occurred while revoking refresh token for student {studentId}.", ex);
             }
         }
     }
