@@ -1,19 +1,24 @@
 using Contracts.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentAPIBusinessLayer;
 
 
 namespace StudentApi.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/Students")]
     public class StudentsController : ControllerBase
     {
         // ---------- GET /api/Students/All ----------
+        [Authorize(Roles = "Admin")]
         [HttpGet("All", Name = "GetAllStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentResponseDTO>> GetAllStudents()
         {
             try
@@ -32,10 +37,11 @@ namespace StudentApi.Controllers
         }
 
         // ---------- GET /api/Students/Passed ----------
+        [AllowAnonymous]
         [HttpGet("Passed", Name = "GetPassedStudents")]
         [ProducesResponseType(typeof(IEnumerable<StudentResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentResponseDTO>> GetPassedStudents()
         {
             try
@@ -54,9 +60,10 @@ namespace StudentApi.Controllers
         }
 
         // ---------- GET /api/Students/AverageGrade ----------
+        [AllowAnonymous]
         [HttpGet("AverageGrade", Name = "GetAverageGrade")]
         [ProducesResponseType(typeof(double), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<double> GetAverageGrade()
         {
             try
@@ -71,11 +78,13 @@ namespace StudentApi.Controllers
         }
 
         // ---------- GET /api/Students/{id} ----------
+        [Authorize]
         [HttpGet("{id}", Name = "GetStudentById")]
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<StudentResponseDTO> GetStudentById(int id)
         {
             if (id < 1)
@@ -97,10 +106,13 @@ namespace StudentApi.Controllers
         }
 
         // ---------- POST /api/Students ----------
+        [Authorize(Roles = "Admin")]
         [HttpPost(Name = "AddStudent")]
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<StudentResponseDTO> AddStudent([FromBody] CreateStudentRequestDTO newStudent)
         {
             if (newStudent == null)
@@ -126,11 +138,14 @@ namespace StudentApi.Controllers
         }
 
         // ---------- PUT /api/Students/{id} ----------
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}", Name = "UpdateStudent")]
         [ProducesResponseType(typeof(StudentResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<StudentResponseDTO> UpdateStudent(int id, [FromBody] UpdateStudentRequestDTO updatedStudent)
         {
             if (id < 1)
@@ -176,11 +191,14 @@ namespace StudentApi.Controllers
         }
 
         // ---------- DELETE /api/Students/{id} ----------
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}", Name = "DeleteStudent")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult DeleteStudent(int id)
         {
             if (id < 1)
@@ -205,4 +223,3 @@ namespace StudentApi.Controllers
         }
     }
 }
-

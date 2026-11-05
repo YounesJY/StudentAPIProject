@@ -162,6 +162,9 @@ namespace StudentApi.Controllers
             if (incomingHash != student.RefreshTokenHash)
                 return Ok();
 
+            if (student.RefreshTokenRevokedAt != null)
+                return Ok("Logged out successfully");
+
             Student.RevokeRefreshToken(student.Id);
             return Ok("Logged out successfully");
         }
