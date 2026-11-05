@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StudentApi.Authorization;
 using StudentApi.Configuration;
 using StudentDataAccessLayer;
 using System.Text;
@@ -8,8 +10,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// ===============================
 // Add services to the container.
+// ===============================
 DataAccesLayerSettings.SetConnectionString(
     builder.Configuration.GetConnectionString("Default")
         ?? throw new InvalidOperationException("ConnectionStrings:Default is missing."));
@@ -20,6 +23,7 @@ var jwtSettings = jwtSection.Get<JwtSettings>()
 
 if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
     throw new InvalidOperationException("JwtSettings:SecretKey is missing.");
+
 
 builder.Services.Configure<JwtSettings>(jwtSection);
 builder.Services.AddControllers();
@@ -36,6 +40,7 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
 
 // ===============================
 // JWT Authentication Configuration
@@ -56,6 +61,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
     });
+
+
+// ===============================
+// Authorization Configuration
+// ===============================
+builder.Services.AddSingleton<IAuthorizationHandler, StudentOwnerOrAdminHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("StudentOwnerOrAdmin", policy => policy.Requirements.Add(new StudentOwnerOrAdminRequirement()));
+});
+
 
 // ===============================
 // Swagger Configuration
@@ -90,7 +106,9 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
