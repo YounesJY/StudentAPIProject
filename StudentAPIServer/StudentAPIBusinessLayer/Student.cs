@@ -1,4 +1,5 @@
 ﻿using Contracts.DTOs;
+using Contracts.DTOs.Auth;
 using StudentDataAccessLayer;
 
 
@@ -54,6 +55,13 @@ namespace StudentAPIBusinessLayer
 
             return new Student(dto, enMode.Update);
         }
+        public static StudentCredentialsDTO? FindByEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            return StudentData.GetStudentByEmail(email);
+        }
         public static List<StudentResponseDTO> GetAllStudents()
         {
             return StudentData.GetAllStudents();
@@ -81,6 +89,16 @@ namespace StudentAPIBusinessLayer
             {
                 return DeleteResult.DatabaseError(ex.Message);
             }
+        }
+
+
+        public static bool SaveRefreshToken(int studentId, string refreshTokenHash, DateTime expiresAt)
+        {
+            return StudentData.UpdateRefreshToken(studentId, refreshTokenHash, expiresAt);
+        }
+        public static bool RevokeRefreshToken(int studentId)
+        {
+            return StudentData.RevokeRefreshToken(studentId);
         }
 
         private bool IsValid(out string? error)
