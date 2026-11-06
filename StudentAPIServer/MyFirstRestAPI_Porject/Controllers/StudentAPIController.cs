@@ -3,6 +3,7 @@ using Contracts.DTOs.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentAPIBusinessLayer;
+using System.Security.Claims;
 
 
 namespace StudentApi.Controllers
@@ -12,6 +13,14 @@ namespace StudentApi.Controllers
     [Route("api/Students")]
     public class StudentsController : ControllerBase
     {
+        private readonly ILogger<StudentsController> _logger;
+
+        public StudentsController(ILogger<StudentsController> logger)
+        {
+            _logger = logger;
+        }
+
+
         // ---------- GET /api/Students/All ----------
         [Authorize(Roles = "Admin")]
         [HttpGet("All", Name = "GetAllStudents")]
@@ -22,19 +31,12 @@ namespace StudentApi.Controllers
         [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentResponseDTO>> GetAllStudents()
         {
-            try
-            {
-                List<StudentResponseDTO> students = Student.GetAllStudents();
+            List<StudentResponseDTO> students = Student.GetAllStudents();
 
-                if (students.Count == 0)
-                    return NotFound("No students found.");
+            if (students.Count == 0)
+                return NotFound("No students found.");
 
-                return Ok(students);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
-            }
+            return Ok(students);
         }
 
         // ---------- GET /api/Students/Passed ----------
@@ -107,18 +109,22 @@ namespace StudentApi.Controllers
 
             return result.Status switch
             {
-                SaveResult.enSaveResult.Success =>
-                    CreatedAtRoute("GetStudentById", new { id = student.ID }, student.ToDTO()),
+                SaveResult.enSaveResult.Success => HandleAddSuccess(student),
+                SaveResult.enSaveResult.ValidationFailed => BadRequest(result.ErrorMessage),
+                SaveResult.enSaveResult.DatabaseError => StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
 
-                SaveResult.enSaveResult.ValidationFailed =>
-                    BadRequest(result.ErrorMessage),
-
-                SaveResult.enSaveResult.DatabaseError =>
-                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
-
-                _ =>
-                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+                _ => StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
             };
+        }
+        private ActionResult<StudentResponseDTO> HandleAddSuccess(Student student)
+        {
+            _logger.LogInformation(
+                "Admin action: AddStudent. AdminId={AdminId}, NewStudentId={NewStudentId}, IP={IP}",
+                User.FindFirstValue(ClaimTypes.NameIdentifier),
+                student.ID,
+                HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+            return CreatedAtRoute("GetStudentById", new { id = student.ID }, student.ToDTO());
         }
 
         // ---------- PUT /api/Students/{id} ----------
@@ -150,23 +156,24 @@ namespace StudentApi.Controllers
 
             return result.Status switch
             {
-                SaveResult.enSaveResult.Success =>
-                    Ok(student.ToDTO()),
+                SaveResult.enSaveResult.Success => HandleUpdateSuccess(student, id),
+                SaveResult.enSaveResult.ValidationFailed => BadRequest(result.ErrorMessage),
+                SaveResult.enSaveResult.NotFound => NotFound(result.ErrorMessage),
+                SaveResult.enSaveResult.DatabaseError => StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
 
-                SaveResult.enSaveResult.ValidationFailed =>
-                    BadRequest(result.ErrorMessage),
-
-                SaveResult.enSaveResult.NotFound =>
-                    NotFound(result.ErrorMessage),
-
-                SaveResult.enSaveResult.DatabaseError =>
-                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
-
-                _ =>
-                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+                _ => StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
             };
         }
+        private ActionResult<StudentResponseDTO> HandleUpdateSuccess(Student student, int id)
+        {
+            _logger.LogInformation(
+                "Admin action: UpdateStudent. AdminId={AdminId}, TargetId={TargetId}, IP={IP}",
+                User.FindFirstValue(ClaimTypes.NameIdentifier),
+                id,
+                HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
+            return Ok(student.ToDTO());
+        }
         // ---------- DELETE /api/Students/{id} ----------
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}", Name = "DeleteStudent")]
@@ -185,18 +192,22 @@ namespace StudentApi.Controllers
 
             return result.Status switch
             {
-                DeleteResult.enDeleteResult.Success =>
-                    NoContent(),
+                DeleteResult.enDeleteResult.Success => HandleDeleteSuccess(id),
+                DeleteResult.enDeleteResult.NotFound => NotFound(result.ErrorMessage),
+                DeleteResult.enDeleteResult.DatabaseError => StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
 
-                DeleteResult.enDeleteResult.NotFound =>
-                    NotFound(result.ErrorMessage),
-
-                DeleteResult.enDeleteResult.DatabaseError =>
-                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
-
-                _ =>
-                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+                _ => StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
             };
+        }
+        private ActionResult HandleDeleteSuccess(int id)
+        {
+            _logger.LogInformation(
+                "Admin action: DeleteStudent. AdminId={AdminId}, TargetId={TargetId}, IP={IP}",
+                User.FindFirstValue(ClaimTypes.NameIdentifier),
+                id,
+                HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+            return NoContent();
         }
     }
 }

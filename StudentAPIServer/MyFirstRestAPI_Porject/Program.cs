@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using StudentApi.Authorization;
 using StudentApi.Configuration;
 using StudentDataAccessLayer;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -168,6 +169,21 @@ app.UseHttpsRedirection();
 app.UseCors("StudentApiCorsPolicy");
 app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode == StatusCodes.Status403Forbidden)
+    {
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var path = context.Request.Path.ToString();
+
+        app.Logger.LogWarning(
+            "Forbidden access. UserId={UserId}, Path={Path}, IP={IP}",
+            userId, path, ip);
+    }
+});
 app.UseAuthorization();
 app.MapControllers();
 
