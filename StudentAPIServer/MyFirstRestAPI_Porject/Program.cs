@@ -109,14 +109,36 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-
+// ===============================
 // Configure the HTTP request pipeline.
+// ===============================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// ASP.NET Core has a built-in ProblemDetails class (RFC 7807).
+// Use it if you want to return more detailed error information in a standardized format.
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var exceptionFeature = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+
+        if (exceptionFeature != null)
+        {
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(exceptionFeature.Error, "Unhandled exception on {Path}", context.Request.Path);
+        }
+
+        await context.Response.WriteAsync("{\"error\":\"An internal error occurred.\"}");
+    });
+});
 app.UseHttpsRedirection();
 app.UseCors("StudentApiCorsPolicy");
 app.UseAuthentication();

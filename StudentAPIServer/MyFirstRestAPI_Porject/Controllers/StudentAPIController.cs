@@ -44,19 +44,12 @@ namespace StudentApi.Controllers
         [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentResponseDTO>> GetPassedStudents()
         {
-            try
-            {
-                List<StudentResponseDTO> passedStudents = Student.GetPassedStudents();
+            List<StudentResponseDTO> passedStudents = Student.GetPassedStudents();
 
-                if (passedStudents.Count == 0)
-                    return NotFound("No students found.");
+            if (passedStudents.Count == 0)
+                return NotFound("No students found.");
 
-                return Ok(passedStudents);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
-            }
+            return Ok(passedStudents);
         }
 
         // ---------- GET /api/Students/AverageGrade ----------
@@ -66,15 +59,9 @@ namespace StudentApi.Controllers
         [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
         public ActionResult<double> GetAverageGrade()
         {
-            try
-            {
-                double averageGrade = Student.GetAverageGrade();
-                return Ok(averageGrade);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
-            }
+            double averageGrade = Student.GetAverageGrade();
+            throw new Exception("Test exception from Phase 8.1");
+            return Ok(averageGrade);
         }
 
         // ---------- GET /api/Students/{id} ----------
@@ -91,23 +78,15 @@ namespace StudentApi.Controllers
             if (id < 1)
                 return BadRequest($"Not accepted ID {id}");
 
-            try
-            {
-                var authResult = await authorizationService.AuthorizeAsync(User, id, "StudentOwnerOrAdmin");
+            var authResult = await authorizationService.AuthorizeAsync(User, id, "StudentOwnerOrAdmin");
+            if (!authResult.Succeeded)
+                return Forbid();
 
-                if (!authResult.Succeeded)
-                    return Forbid();
+            var student = Student.Find(id);
+            if (student == null)
+                return NotFound($"Student with ID {id} not found.");
 
-                var student = Student.Find(id);
-                if (student == null)
-                    return NotFound($"Student with ID {id} not found.");
-
-                return Ok(student.ToDTO());
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "An internal error occurred.");
-            }
+            return Ok(student.ToDTO());
         }
 
         // ---------- POST /api/Students ----------
@@ -159,40 +138,33 @@ namespace StudentApi.Controllers
             if (updatedStudent == null)
                 return BadRequest("Request body is required.");
 
-            try
+            Student? student = Student.Find(id);
+            if (student == null)
+                return NotFound($"Student with ID {id} not found.");
+
+            student.Name = updatedStudent.Name;
+            student.Age = updatedStudent.Age;
+            student.Grade = updatedStudent.Grade;
+
+            SaveResult result = student.Save();
+
+            return result.Status switch
             {
-                Student? student = Student.Find(id);
-                if (student == null)
-                    return NotFound($"Student with ID {id} not found.");
+                SaveResult.enSaveResult.Success =>
+                    Ok(student.ToDTO()),
 
-                student.Name = updatedStudent.Name;
-                student.Age = updatedStudent.Age;
-                student.Grade = updatedStudent.Grade;
+                SaveResult.enSaveResult.ValidationFailed =>
+                    BadRequest(result.ErrorMessage),
 
-                SaveResult result = student.Save();
+                SaveResult.enSaveResult.NotFound =>
+                    NotFound(result.ErrorMessage),
 
-                return result.Status switch
-                {
-                    SaveResult.enSaveResult.Success =>
-                        Ok(student.ToDTO()),
+                SaveResult.enSaveResult.DatabaseError =>
+                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
 
-                    SaveResult.enSaveResult.ValidationFailed =>
-                        BadRequest(result.ErrorMessage),
-
-                    SaveResult.enSaveResult.NotFound =>
-                        NotFound(result.ErrorMessage),
-
-                    SaveResult.enSaveResult.DatabaseError =>
-                        StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred."),
-
-                    _ =>
-                        StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
-                };
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.");
-            }
+                _ =>
+                    StatusCode(StatusCodes.Status500InternalServerError, "An internal error occurred.")
+            };
         }
 
         // ---------- DELETE /api/Students/{id} ----------
