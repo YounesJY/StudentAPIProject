@@ -65,7 +65,7 @@ namespace StudentApi.Controllers
         [EnableRateLimiting("AuthLimiter")]
         [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status429TooManyRequests)]
         public IActionResult Login([FromBody] LoginRequest request)
         {
@@ -110,8 +110,8 @@ namespace StudentApi.Controllers
         [HttpPost("refresh")]
         [EnableRateLimiting("AuthLimiter")]
         [ProducesResponseType(typeof(TokenResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status429TooManyRequests)]
         public IActionResult Refresh([FromBody] RefreshRequest request)
         {
@@ -155,7 +155,7 @@ namespace StudentApi.Controllers
 
         [HttpPost("logout")]
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public IActionResult Logout([FromBody] LogoutRequest request)
         {
             var student = Student.FindByEmail(request.Email);
